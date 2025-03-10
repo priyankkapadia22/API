@@ -10,7 +10,7 @@ app = Flask(__name__)
 CLASS_LABELS = ['Adenocarcinoma', 'Benign', 'Squamous Cell Carcinoma', 'Normal']
 
 # Load TFLite model
-MODEL_PATH = r"D:\MAD\cancer_detection\assets\model.tflite"
+MODEL_PATH = r"./model.tflite"  # Replace with the actual model filename
 if not os.path.exists(MODEL_PATH):
     raise FileNotFoundError(f"Model file not found at: {MODEL_PATH}")
 
