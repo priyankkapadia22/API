@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 import os
-#import tensorflow.lite as tflite
+import tensorflow.lite as tflite
 import ai_edge_litert as litert
 import numpy as np
 from PIL import Image
@@ -26,7 +26,7 @@ for model_name, path in MODEL_PATHS.items():
 # Load interpreters for each model
 interpreters = {}
 for model_name, path in MODEL_PATHS.items():
-    interpreter = litert.Interpreter(model_path=path)
+    interpreter = tflite.Interpreter(model_path=path)
     interpreter.allocate_tensors()
     interpreters[model_name] = interpreter
     #print(f"✅ Loaded model: {model_name} from {path}")
