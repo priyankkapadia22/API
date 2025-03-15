@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 import os
 import tensorflow.lite as tflite
-import ai_edge_litert as litert
 import numpy as np
 from PIL import Image
 from collections import Counter
