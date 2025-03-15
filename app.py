@@ -12,9 +12,9 @@ CLASS_LABELS = ['Adenocarcinoma', 'Benign', 'Squamous Cell Carcinoma', 'Normal']
 
 # Load all three TFLite models
 MODEL_PATHS = {
-    "model1": r"D:\MAD\MINI\cancervision\api\lung_cancer_mobilenet.tflite",
-    "model2": r"D:\MAD\MINI\cancervision\api\lung_cancer_resnet.tflite",
-    "model3": r"D:\MAD\MINI\cancervision\api\lung_cancer_vgg19.tflite",
+    "model1": r"lung_cancer_mobilenet.tflite",
+    "model2": r"lung_cancer_resnet.tflite",
+    "model3": r"lung_cancer_vgg19.tflite",
 }
 
 # Ensure models exist
