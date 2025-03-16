@@ -10,17 +10,20 @@ app = Flask(__name__)
 # Define class labels
 CLASS_LABELS = ['Adenocarcinoma', 'Benign', 'Squamous Cell Carcinoma', 'Normal']
 
-# Load all three TFLite models
+# Model directory (models are in the same folder as app.py)
+MODEL_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Load all TFLite models dynamically
 MODEL_PATHS = {
-    "model1": r"lung_cancer_mobilenet.tflite",
-    "model2": r"lung_cancer_resnet.tflite",
-    "model3": r"lung_cancer_vgg19.tflite",
+    "model1": os.path.join(MODEL_DIR, "lung_cancer_mobilenet.tflite"),
+    "model2": os.path.join(MODEL_DIR, "lung_cancer_resnet.tflite"),
+    "model3": os.path.join(MODEL_DIR, "lung_cancer_vgg19.tflite"),
 }
 
-# Ensure models exist
+# Ensure all models exist
 for model_name, path in MODEL_PATHS.items():
     if not os.path.exists(path):
-        raise FileNotFoundError(f"Model file not found at: {path}")
+        raise FileNotFoundError(f"❌ Model file not found at: {path}")
 
 # Load interpreters for each model
 interpreters = {}
@@ -28,23 +31,25 @@ for model_name, path in MODEL_PATHS.items():
     interpreter = tflite.Interpreter(model_path=path)
     interpreter.allocate_tensors()
     interpreters[model_name] = interpreter
-    #print(f"✅ Loaded model: {model_name} from {path}")
+    #print(f"✅ Loaded model: {model_name}")
 
 @app.route("/")  # Homepage
 def home():
-    return "Cancer Detection API is Running!"
+    return "🚀 Cancer Detection API is Running!"
 
 @app.route("/predict", methods=["POST"])
 def predict():
     try:
+        # Check if file is in request
         if "file" not in request.files:
-            #print("❌ No file provided in request")
+            print("❌ No file provided in request")
             return jsonify({"error": "No file provided"}), 400
 
         file = request.files["file"]
         #print(f"📂 Received file: {file.filename}")
 
-        image = Image.open(file).resize((150, 150))  # Resize to model input size
+        # Process image
+        image = Image.open(file).convert("RGB").resize((150, 150))
         image = np.array(image, dtype=np.float32) / 255.0
         image = np.expand_dims(image, axis=0)  # Add batch dimension
 
@@ -52,7 +57,7 @@ def predict():
         confidence_scores = []
         model_predictions = []
 
-        # Loop through each model and get predictions
+        # Loop through models and get predictions
         for model_name, interpreter in interpreters.items():
             #print(f"🔍 Processing image with {model_name}")
             
@@ -79,11 +84,11 @@ def predict():
 
             #print(f"📊 {model_name} predicted: {CLASS_LABELS[predicted_class]} with confidence {confidence_score:.2f}")
 
-        # Perform Majority Voting
+        # Majority Voting
         class_votes = Counter(predictions)
         final_class = class_votes.most_common(1)[0][0]  # Get the most voted class
 
-        # Compute final confidence as the average confidence of models that predicted the final class
+        # Compute final confidence (average of confident models)
         relevant_confidences = [conf for i, conf in enumerate(confidence_scores) if predictions[i] == final_class]
         final_confidence = float(np.mean(relevant_confidences))
 
@@ -100,7 +105,7 @@ def predict():
         })
 
     except Exception as e:
-        #print(f"❌ Error: {e}")
+        print(f"❌ Error: {e}")
         return jsonify({"error": str(e)}), 500
     
 if __name__ == "__main__":
