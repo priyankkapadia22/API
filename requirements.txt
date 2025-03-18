@@ -1,5 +1,5 @@
 Flask
 Pillow
 numpy<2
-tensorflow
+tflite-runtime
 tensorflow-cpu
