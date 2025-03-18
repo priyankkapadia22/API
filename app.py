@@ -10,57 +10,47 @@ app = Flask(__name__)
 # Define class labels
 CLASS_LABELS = ['Adenocarcinoma', 'Benign', 'Squamous Cell Carcinoma', 'Normal']
 
-# Model directory (models are in the same folder as app.py)
+# Model directory
 MODEL_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Load all TFLite models dynamically
+# Define model paths
 MODEL_PATHS = {
     "model1": os.path.join(MODEL_DIR, "lung_cancer_mobilenet.tflite"),
     "model2": os.path.join(MODEL_DIR, "lung_cancer_resnet.tflite"),
     "model3": os.path.join(MODEL_DIR, "lung_cancer_vgg19.tflite"),
 }
 
-# Ensure all models exist
-for model_name, path in MODEL_PATHS.items():
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"❌ Model file not found at: {path}")
-
-# Load interpreters for each model
-interpreters = {}
-for model_name, path in MODEL_PATHS.items():
-    interpreter = tflite.Interpreter(model_path=path)
+# Load interpreters dynamically when needed to save RAM
+def load_interpreter(model_path):
+    interpreter = tflite.Interpreter(model_path=model_path)
     interpreter.allocate_tensors()
-    interpreters[model_name] = interpreter
-    #print(f"✅ Loaded model: {model_name}")
+    return interpreter
 
-@app.route("/")  # Homepage
+@app.route("/")
 def home():
-    return "🚀 Cancer Detection API is Running!"
+    return "🚀 Optimized Cancer Detection API is Running!"
 
 @app.route("/predict", methods=["POST"])
 def predict():
     try:
-        # Check if file is in request
         if "file" not in request.files:
-            print("❌ No file provided in request")
             return jsonify({"error": "No file provided"}), 400
 
         file = request.files["file"]
-        #print(f"📂 Received file: {file.filename}")
 
-        # Process image
+        # Preprocess image
         image = Image.open(file).convert("RGB").resize((150, 150))
         image = np.array(image, dtype=np.float32) / 255.0
-        image = np.expand_dims(image, axis=0)  # Add batch dimension
+        image = np.expand_dims(image, axis=0)
 
         predictions = []
         confidence_scores = []
         model_predictions = []
 
-        # Loop through models and get predictions
-        for model_name, interpreter in interpreters.items():
-            #print(f"🔍 Processing image with {model_name}")
-            
+        # Load and use each model one by one to optimize RAM usage
+        for model_name, model_path in MODEL_PATHS.items():
+            interpreter = load_interpreter(model_path)
+
             input_details = interpreter.get_input_details()
             output_details = interpreter.get_output_details()
 
@@ -68,7 +58,7 @@ def predict():
             interpreter.invoke()
 
             raw_output = interpreter.get_tensor(output_details[0]["index"])
-            raw_output = np.squeeze(raw_output)  # Remove batch dimension
+            raw_output = np.squeeze(raw_output)
 
             predicted_class = int(np.argmax(raw_output))
             confidence_score = float(np.max(raw_output))
@@ -82,13 +72,11 @@ def predict():
                 "confidence": confidence_score
             })
 
-            #print(f"📊 {model_name} predicted: {CLASS_LABELS[predicted_class]} with confidence {confidence_score:.2f}")
-
         # Majority Voting
         class_votes = Counter(predictions)
-        final_class = class_votes.most_common(1)[0][0]  # Get the most voted class
+        final_class = class_votes.most_common(1)[0][0]
 
-        # Compute final confidence (average of confident models)
+        # Compute final confidence
         relevant_confidences = [conf for i, conf in enumerate(confidence_scores) if predictions[i] == final_class]
         final_confidence = float(np.mean(relevant_confidences))
 
@@ -97,17 +85,14 @@ def predict():
             "final_confidence": final_confidence
         }
 
-        #print(f"🏆 Final Prediction: {CLASS_LABELS[final_class]} with confidence {final_confidence:.2f}")
-
         return jsonify({
             "individual_model_predictions": model_predictions,
             "final_prediction": final_prediction
         })
 
     except Exception as e:
-        print(f"❌ Error: {e}")
         return jsonify({"error": str(e)}), 500
-    
+
 if __name__ == "__main__":
-    #print("🚀 Starting Cancer Detection API...")
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
