@@ -1,4 +1,5 @@
 Flask
 Pillow
-numpy
+numpy<2
+tensorflow
 tensorflow-cpu
